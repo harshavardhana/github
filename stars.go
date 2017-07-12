@@ -68,15 +68,15 @@ func (gh *GitHub) getStargazersPage(repo RepoInfo, page int) (stars []Stargazer,
 		githubAPIURL,
 		repo.FullName,
 		page,
-		gh.pageSize,
+		gh.PageSize,
 	)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return stars, err
 	}
 	req.Header.Add("Accept", "application/vnd.github.v3.star+json")
-	if gh.token != "" {
-		req.Header.Add("Authorization", fmt.Sprintf("token %s", gh.token))
+	if gh.Token != "" {
+		req.Header.Add("Authorization", fmt.Sprintf("Token %s", gh.Token))
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -105,5 +105,5 @@ func (gh *GitHub) getStargazersPage(repo RepoInfo, page int) (stars []Stargazer,
 }
 
 func (gh *GitHub) lastPage(repo RepoInfo) int {
-	return (repo.StargazersCount / gh.pageSize) + 1
+	return (repo.StargazersCount / gh.PageSize) + 1
 }

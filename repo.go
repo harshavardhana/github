@@ -13,15 +13,15 @@ type RepoInfo struct {
 	CreatedAt       string `json:"created_at"`
 }
 
-// GetRepoInfo gets the given repository info.
-func (gh *GitHub) GetRepoInfo(name string) (repo RepoInfo, err error) {
+// RepoInfo gets the given repository info.
+func (gh *GitHub) RepoInfo(name string) (repo RepoInfo, err error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/repos/%s", githubAPIURL, name), nil)
 	if err != nil {
 		return
 	}
-	// Set token if provided.
-	if gh.token != "" {
-		req.Header.Add("Authorization", fmt.Sprintf("token %s", gh.token))
+	// Set Token if provided.
+	if gh.Token != "" {
+		req.Header.Add("Authorization", fmt.Sprintf("Token %s", gh.Token))
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

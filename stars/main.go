@@ -1,20 +1,22 @@
-// +build ignore
-
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
+	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/harshavardhana/github"
 	chart "github.com/wcharczuk/go-chart"
 	"github.com/wcharczuk/go-chart/drawing"
 )
 
-var gh *github.Github
+var gh *github.GitHub
 
 // Compare repos
 var (
@@ -27,9 +29,9 @@ func init() {
 	flag.StringVar(&repo2, "repo2", "ceph/ceph", "provide custom repo name")
 	pageSize, err := strconv.Atoi(os.Getenv("GITHUB_PAGE_SIZE"))
 	if err != nil {
-		pageSize = 0
+		pageSize = 100
 	}
-	gh = &github.Github{
+	gh = &github.GitHub{
 		Token:    os.Getenv("GITHUB_TOKEN"),
 		PageSize: pageSize,
 	}
@@ -48,10 +50,20 @@ func main() {
 			log.Fatalln(err)
 		}
 		defer w.Close()
-		if err = graph.Render(chart.SVG, w); err != nil {
+		isSVG := strings.Contains(mime.TypeByExtension(filepath.Ext(os.Args[1])), "svg")
+		isPNG := strings.Contains(mime.TypeByExtension(filepath.Ext(os.Args[1])), "png")
+		switch {
+		case isSVG:
+			err = graph.Render(chart.SVG, w)
+		case isPNG:
+			err = graph.Render(chart.PNG, w)
+		default:
+			err = errors.New("Unrecognized file type")
+		}
+		if err != nil {
 			log.Fatalln(err)
 		}
-		return
+		os.Exit(0)
 	}
 	http.HandleFunc("/", drawChart)
 	http.HandleFunc("/favico.ico", func(res http.ResponseWriter, req *http.Request) {
@@ -62,11 +74,11 @@ func main() {
 }
 
 func generateGraph() (graph chart.Chart, err error) {
-	r1, err := gh.RepoDetails(repo1)
+	r1, err := gh.RepoInfo(repo1)
 	if err != nil {
 		return graph, err
 	}
-	r2, err := gh.RepoDetails(repo2)
+	r2, err := gh.RepoInfo(repo2)
 	if err != nil {
 		return graph, err
 	}
@@ -149,7 +161,7 @@ func generateGraph() (graph chart.Chart, err error) {
 func drawChart(w http.ResponseWriter, req *http.Request) {
 	graph, err := generateGraph()
 	if err != nil {
-		http.Error(w, error.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	w.Header().Add("Content-Type", "image/svg+xml")
