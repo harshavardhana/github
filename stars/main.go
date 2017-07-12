@@ -14,48 +14,71 @@ import (
 	"github.com/wcharczuk/go-chart/drawing"
 )
 
-var repo1 string
-var repo2 string
+var gh *github.Github
+
+// Compare repos
+var (
+	repo1 string
+	repo2 string
+)
 
 func init() {
 	flag.StringVar(&repo1, "repo1", "minio/minio", "provide custom repo name")
 	flag.StringVar(&repo2, "repo2", "ceph/ceph", "provide custom repo name")
+	pageSize, err := strconv.Atoi(os.Getenv("GITHUB_PAGE_SIZE"))
+	if err != nil {
+		pageSize = 0
+	}
+	gh = &github.Github{
+		Token:    os.Getenv("GITHUB_TOKEN"),
+		PageSize: pageSize,
+	}
 }
 
 func main() {
 	flag.Parse()
 
+	if len(os.Args) == 2 {
+		graph, err := generateGraph()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		w, err := os.Create(os.Args[1])
+		if err != nil {
+			log.Fatalln(err)
+		}
+		defer w.Close()
+		if err = graph.Render(chart.SVG, w); err != nil {
+			log.Fatalln(err)
+		}
+		return
+	}
 	http.HandleFunc("/", drawChart)
 	http.HandleFunc("/favico.ico", func(res http.ResponseWriter, req *http.Request) {
 		res.Write([]byte{})
 	})
-	log.Println("Started listening on :8080")
+	log.Println("Started listening on :8080, visit http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
 
-func drawChart(w http.ResponseWriter, req *http.Request) {
-	pageSize, err := strconv.Atoi(os.Getenv("GITHUB_PAGE_SIZE"))
-	if err != nil {
-		pageSize = 0
-	}
-	gh := github.New(os.Getenv("GITHUB_TOKEN"), pageSize)
+func generateGraph() (graph chart.Chart, err error) {
 	r1, err := gh.RepoDetails(repo1)
 	if err != nil {
-		log.Fatal(err)
+		return graph, err
 	}
 	r2, err := gh.RepoDetails(repo2)
 	if err != nil {
-		log.Fatal(err)
+		return graph, err
 	}
 
 	st1, err := gh.Stargazers(r1)
 	if err != nil {
-		log.Fatal(err)
+		return graph, err
 	}
 
 	st2, err := gh.Stargazers(r2)
 	if err != nil {
-		log.Fatal(err)
+		return graph, err
 	}
 
 	ts1 := chart.TimeSeries{
@@ -89,7 +112,7 @@ func drawChart(w http.ResponseWriter, req *http.Request) {
 		ts2.YValues = append(ts2.YValues, float64(i))
 	}
 
-	var graph = chart.Chart{
+	graph = chart.Chart{
 		XAxis: chart.XAxis{
 			Name:      "Time",
 			NameStyle: chart.StyleShow(),
@@ -119,6 +142,15 @@ func drawChart(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		Series: []chart.Series{ts1, ts2},
+	}
+	return graph, nil
+}
+
+func drawChart(w http.ResponseWriter, req *http.Request) {
+	graph, err := generateGraph()
+	if err != nil {
+		http.Error(w, error.Error(), http.StatusBadRequest)
+		return
 	}
 	w.Header().Add("Content-Type", "image/svg+xml")
 	graph.Render(chart.SVG, w)
