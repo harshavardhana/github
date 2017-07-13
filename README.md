@@ -10,19 +10,13 @@ go get -u github.com/harshavardhana/github/stars
 
 ## Usage
 
+Generate an `output.svg` a comparison chart for `minio/minio` v/s `mongodb/mongo`.
 ```sh
-stars -repo1 minio/minio -repo2 mongodb/mongo
+stars -mode=file -repos="minio/minio,mongodb/mongo" output.svg
 ```
 
 With GitHub token
 ```
 export GITHUB_TOKEN=xxxxxxxxxxx
-stars -repo1 minio/minio -repo2 mongodb/mongo
-```
-
-With Github token and custom page size.
-```
-export GITHUB_TOKEN=xxxxxxxxxxx
-export GITHUB_PAGE_SIZE=1000
 stars -repo1 minio/minio -repo2 mongodb/mongo
 ```
