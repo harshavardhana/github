@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/harshavardhana/github"
 	chart "github.com/wcharczuk/go-chart"
@@ -193,9 +194,12 @@ func generateGraph(rs []github.RepoInfo) (graph chart.Chart, err error) {
 				StrokeColor: generateRandomColor(nil),
 			},
 		}
+		t := time.Date(2013, time.January, 10, 23, 0, 0, 0, time.UTC)
 		for j, star := range st {
-			timeSeries.XValues = append(timeSeries.XValues, star.StarredAt)
-			timeSeries.YValues = append(timeSeries.YValues, float64(j))
+			if star.StarredAt.After(t) {
+				timeSeries.XValues = append(timeSeries.XValues, star.StarredAt)
+				timeSeries.YValues = append(timeSeries.YValues, float64(j))
+			}
 		}
 		timeSeriesList = append(timeSeriesList, timeSeries)
 	}
